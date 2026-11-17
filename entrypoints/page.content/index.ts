@@ -60,6 +60,7 @@ function canInspect(element: HTMLElement) {
 export default defineContentScript({
   matches: ["http://*/*", "https://*/*"],
   world: "ISOLATED",
+  runAt: "document_start",
   main(ctx) {
     let snapshot: z.infer<typeof pageSnapshotSchema> | undefined;
     let captured = new Map<string, PageAnchor>();

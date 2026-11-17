@@ -1,4 +1,5 @@
 import { randomUUID } from "node:crypto";
+import { setTimeout as delay } from "node:timers/promises";
 import { z } from "zod";
 import { resolveTab, withExtensionWorld } from "./cdp.ts";
 import {
@@ -29,10 +30,15 @@ export async function withSpotlightPage<T>(
   }) => Promise<T>,
   tabId?: string,
 ) {
-  const { cdpUrl, extensionId } = await readSession();
   const requested = new URL(url);
+  const { cdpUrl, extensionId } = await readSession(requested.href, tabId);
   const target = await resolveTab(cdpUrl, requested.href, tabId);
   return withExtensionWorld(cdpUrl, target, extensionId, async ({ evaluate, bringToFront }) => {
+    for (let attempt = 0; ; attempt++) {
+      if (await evaluate('document.readyState !== "loading" && !!document.body')) break;
+      if (attempt === 99) throw new Error("The page is still loading. Wait for it to finish and capture again.");
+      await delay(100);
+    }
     const current = new URL(pageUrl.parse(await evaluate("location.href")));
     const upgraded =
       requested.protocol === "http:" &&

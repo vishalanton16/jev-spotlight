@@ -3,17 +3,12 @@ import { readFile, unlink, writeFile } from "node:fs/promises";
 import { setTimeout as delay } from "node:timers/promises";
 import { fileURLToPath } from "node:url";
 import { z } from "zod";
+import { existingSession, localCdpUrl } from "./existing-browser.ts";
 
 export const sessionFile = new URL("../.session.json", import.meta.url);
 const launcher = fileURLToPath(new URL("./launch.ts", import.meta.url));
-const loopback = z.url().refine((value) => {
-  const url = new URL(value);
-  return (
-    url.protocol === "http:" && url.hostname === "127.0.0.1" && !!url.port && url.origin === value
-  );
-});
 const sessionSchema = z.object({
-  cdpUrl: loopback,
+  cdpUrl: localCdpUrl,
   extensionId: z.string().regex(/^[a-p]{32}$/),
 });
 
@@ -80,9 +75,10 @@ export async function claimSession() {
 
 let starting: Promise<z.infer<typeof sessionSchema>> | undefined;
 
-export async function readSession() {
+export async function readSession(url: string, tabId?: string) {
   const state = await readState();
-  if (state.session && (await reachable(state.session.cdpUrl))) return state.session;
+  const existing = await existingSession(url, tabId, state.session);
+  if (existing) return existing;
   if (!starting)
     starting = startSession().finally(() => {
       starting = undefined;

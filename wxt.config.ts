@@ -5,6 +5,8 @@ export default defineConfig({
   manifest: {
     name: "Jev Spotlight",
     description: "Draw visual explanations on the page.",
+    permissions: ["scripting"],
+    host_permissions: ["http://*/*", "https://*/*"],
     icons: {
       16: "icon/16.png",
       32: "icon/32.png",

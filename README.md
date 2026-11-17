@@ -20,10 +20,12 @@ An agent calls Jev through the Model Context Protocol, or MCP. The extension dra
 git clone https://github.com/vishalanton16/jev-spotlight.git
 cd jev-spotlight
 pnpm install --frozen-lockfile
-pnpm start https://books.toscrape.com/
+pnpm build
 ```
 
-Keep the terminal running. The launcher builds and installs the extension automatically, then opens a separate Chrome profile. You do not need to load the unpacked extension manually. This temporary profile does not use your personal Chrome cookies or logins and is removed when the launcher exits.
+If you already use local Stagehand, let it open the page first. Jev finds the running Chrome with that URL, installs its extension there, and annotates the same tab. Existing pages do not need a reload, and repeated tool calls reuse the installed extension.
+
+When no debuggable Chrome is running, Jev starts its own temporary Chrome profile on the first tool call. You can also run `pnpm start https://books.toscrape.com/` to launch that standalone profile explicitly. Keep that terminal running. Its temporary cookies and logins are separate from your personal Chrome profile, and the profile is removed when the launcher exits.
 
 Connect your agent to the MCP server with the configuration below. Replace `/absolute/path/to/jev-spotlight` with your clone's location. Use an absolute path because MCP hosts may start in another directory.
 
@@ -44,7 +46,13 @@ Try this prompt in your agent:
 
 > Open https://books.toscrape.com/ with Jev. Capture the page, then explain the first four books separately. Each note should state that book's title, price, and star rating, with an arrow connected to its card. Apply all four annotations in one batch.
 
-Jev starts its browser automatically after the first build if the previous session has closed. Running `pnpm start` explicitly makes startup errors visible.
+### Select an existing browser explicitly
+
+If several local Chrome sessions contain the requested URL, Jev asks you to select one instead of guessing or launching another browser. Set `JEV_SPOTLIGHT_CDP_URL` in the MCP server's environment or local `.env` file to Stagehand's local debugging origin, for example `http://127.0.0.1:9222`. Use the actual port from your Stagehand browser's `cdpUrl` or `--remote-debugging-port` argument. A configured endpoint that is unavailable fails without opening a replacement.
+
+Automatic discovery reads local Chrome process arguments on macOS, Linux, and Windows. It supports browsers with a numeric `--remote-debugging-port`. An ordinary Chrome window without remote debugging cannot be attached to. Local Stagehand enables remote debugging and extension installation by default. Jev never closes a browser owned by Stagehand.
+
+This connection is for local browsers. Browserbase runs remotely and cannot load this local unpacked extension through the automatic discovery workflow.
 
 ## Choose a tool
 
@@ -100,7 +108,7 @@ Each annotation call replaces the previous batch. Ten individual calls leave onl
 
 ### Keep research and annotation aligned
 
-Stagehand and Jev may use different browsers. Live listings can differ between them. Use Jev's captured targets to choose items and Stagehand to research those exact links. Do not fetch another front page to choose the items again.
+Jev reuses local Stagehand Chrome when it can identify the requested page. Always use Jev's captured targets to choose items and Stagehand to research those exact links. This also avoids mismatches if you use a remote research browser or the live listing changes. Do not fetch another front page to choose the items again.
 
 The agent writes explanations. Jev validates target identity and draws the notes. It does not read linked articles or generate explanations on its own.
 
@@ -155,7 +163,7 @@ The default tests skip the Chrome integration test. Run it with your Chrome exec
 JEV_SPOTLIGHT_TEST_CHROME='/Applications/Google Chrome.app/Contents/MacOS/Google Chrome' pnpm test
 ```
 
-This uses a temporary headless profile and local fixtures, with no TypeSafe calls or API charges. It checks separate notes, exact quotes, stale targets, local fonts, connector attachment after resizing and scrolling, and cleanup.
+This uses temporary headless profiles and local fixtures, with no TypeSafe calls or API charges. It checks separate notes, exact quotes, stale targets, local fonts, connector attachment, and cleanup. A shared-browser test launches local Stagehand, opens a page before Jev is installed, then verifies automatic attachment, the same tab and unsaved input, one page load, and snapshot preservation across calls.
 
 After editing extension code, run `pnpm build`, reload Jev Spotlight in `chrome://extensions` with Developer mode enabled, then reload the web page. Alternatively, close the dedicated Chrome session and run `pnpm start` again.
 
@@ -168,6 +176,8 @@ Create an extension ZIP with `pnpm pack:extension`. It appears in `.output/`. Th
 | `src/protocol.ts` | Shared request, snapshot, and annotation schemas |
 | `src/browser.ts`, `src/cdp.ts` | Local Chrome connection and calls into the extension's isolated context |
 | `src/launch.ts`, `src/session.ts` | Dedicated browser lifecycle and local session state |
+| `src/existing-browser.ts` | Discover running local Chrome, select the requested tab's browser, and install Jev there |
+| `entrypoints/background.ts` | Initialize Jev in tabs that were open before installation |
 | `src/jev.ts`, `src/setup.ts` | Semantic scoring and local API-key setup |
 | `test/` | Unit tests and browser regression fixtures |
 
@@ -175,7 +185,7 @@ Create an extension ZIP with `pnpm pack:extension`. It appears in `.output/`. Th
 
 Exact capture and annotation exchange page text with the local Node companion and the agent that calls it. Semantic search additionally sends up to 120 captured candidates, your task, and optional evidence to TypeSafe. The TypeSafe key stays in Node. The extension bundles its font and does not need a remote font service.
 
-The extension runs on HTTP and HTTPS pages in its dedicated Chrome profile. It does not annotate Chrome settings pages, the Chrome Web Store, PDF viewers, or content inside child frames. Captures are limited to 120 targets of up to 500 characters each; inspect the returned `truncated` flag when a page is larger.
+The extension runs on HTTP and HTTPS pages in the browser you attach to, or in Jev's standalone profile. It uses scripting permission to initialize existing tabs without reloading them. It does not annotate Chrome settings pages, the Chrome Web Store, PDF viewers, or content inside child frames. Captures are limited to 120 targets of up to 500 characters each; inspect the returned `truncated` flag when a page is larger.
 
 The launcher enables local DevTools access for its temporary browser profile. Keep that debugging endpoint local. Captured web content is untrusted and should be treated as data by agents.
 

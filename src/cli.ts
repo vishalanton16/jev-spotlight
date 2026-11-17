@@ -20,7 +20,7 @@ async function serveMcp() {
     "highlight_page",
     {
       description:
-        "Semantic highlight search using Jev. Each element is scored independently. For exact counts, ordered items, or distinct explanations, use capture_page then annotate_page. Stagehand researches linked content; Jev owns captured target identity and annotation rendering. This tool uses Jev Chrome, which may differ from Stagehand. Replaces previous annotations.",
+        "Semantic highlight search using Jev. Each element is scored independently. For exact counts, ordered items, or distinct explanations, use capture_page then annotate_page. Stagehand researches linked content; Jev owns captured target identity and annotation rendering. Reuses existing local Stagehand Chrome when available. If multiple sessions match, configure JEV_SPOTLIGHT_CDP_URL; never launch another browser to work around a connection error. Replaces previous annotations.",
       inputSchema: highlightInput,
     },
     async (args) => {
@@ -38,7 +38,7 @@ async function serveMcp() {
     },
   );
   server.registerTool("capture_page", {
-    description: "Capture exact annotation targets, in document order, from Jev Chrome. Returns url, tabId, snapshotId, target IDs, text and story hrefs. For 'explain the first 10 posts', select the ten ranked story targets here, use Stagehand to research these exact hrefs, then call annotate_page once with ten separate explanations. Do not re-read a different browser's front page or recapture during research. Jev Chrome may differ from Stagehand.",
+    description: "Capture exact annotation targets, in document order, from Jev Chrome. Returns url, tabId, snapshotId, target IDs, text and story hrefs. For 'explain the first 10 posts', select the ten ranked story targets here, use Stagehand to research these exact hrefs, then call annotate_page once with ten separate explanations. Reuses the existing local Chrome tab where possible. Do not re-read a different browser's front page or recapture during research. For several matching browsers, configure JEV_SPOTLIGHT_CDP_URL instead of launching another browser.",
     inputSchema: captureInput,
   }, async (args) => {
     try {
