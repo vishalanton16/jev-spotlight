@@ -1,0 +1,30 @@
+{
+  "name": "jev-spotlight",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "build": "wxt build",
+    "check": "wxt prepare && tsc --noEmit",
+    "start": "pnpm build && node src/launch.ts",
+    "setup": "node src/setup.ts",
+    "spotlight": "node src/cli.ts",
+    "pack:extension": "wxt zip",
+    "test": "node --test test/*.test.ts"
+  },
+  "dependencies": {
+    "@browserbasehq/stagehand": "4.4.0",
+    "@modelcontextprotocol/sdk": "1.32.2",
+    "@typesafe-ai/sdk": "0.7.0",
+    "zod": "4.6.6"
+  },
+  "devDependencies": {
+    "@types/node": "^24",
+    "typescript": "^5.9.3",
+    "wxt": "0.21.5"
+  },
+  "engines": {
+    "node": ">=22.18.0"
+  },
+  "packageManager": "pnpm@12.6.0"
+}
